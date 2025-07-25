@@ -1,0 +1,229 @@
+"use client"
+
+import { useState, useMemo } from "react"
+import { Card, CardContent } from "@/components/ui/card"
+import { Thermometer } from "lucide-react"
+import ControlSidebar from "@/components/control-sidebar"
+import Room3DVisualization from "@/components/room-3d-visualization"
+import type { RoomData } from "@/types/interfaces"
+import { calculateThermalPerformance } from "@/utils/thermal-calculations"
+import BottomResultsPanel from "@/components/bottom-results-panel"
+
+const initialRoomData: RoomData = {
+  dimensions: { length: 4, width: 4, height: 2.5 },
+  walls: {
+    material: "brick",
+    thickness: 0.2,
+    insulation: "rockwool",
+    insulationThickness: 0.05,
+  },
+  windows: {
+    count: 2,
+    width: 1.2,
+    height: 1.5,
+    type: "double",
+  },
+  door: {
+    width: 0.9,
+    height: 2.1,
+    type: "wood_basic",
+  },
+  roof: {
+    material: "concrete",
+    thickness: 0.15,
+    insulation: "eps",
+    insulationThickness: 0.08,
+  },
+  adjacentAreas: {
+    front: false,
+    left: false,
+    right: false,
+    back: false,
+    ceiling: false,
+    floor: false,
+  },
+}
+
+export default function ThermalCalculator() {
+  const [roomData, setRoomData] = useState<RoomData>(initialRoomData)
+
+  // Calculate results in real-time
+  const results = useMemo(() => {
+    try {
+      return calculateThermalPerformance(roomData)
+    } catch (error) {
+      return null
+    }
+  }, [roomData])
+
+  const updateRoomData = (section: keyof RoomData, data: any) => {
+    setRoomData((prev) => ({
+      ...prev,
+      [section]: { ...prev[section], ...data },
+    }))
+  }
+
+  return (
+    <div className="h-screen bg-gray-50 flex flex-col overflow-hidden">
+      {/* Header - Ultra Compact */}
+      <header className="bg-white border-b border-gray-200 px-4 py-2 flex-shrink-0">
+        <div className="flex items-center">
+          <Thermometer className="h-5 w-5 text-orange-500" />
+          <span className="text-lg font-bold text-gray-900 ml-2">ThermalCalc</span>
+        </div>
+      </header>
+
+      {/* Main Content - Optimized Layout */}
+      <div className="flex flex-1 min-h-0">
+        {/* Left Section: Energy Label + 3D Visualization */}
+        <div className="flex-1 flex flex-col p-2">
+          <div className="flex gap-2 h-full">
+            {/* Energy Efficiency Label - Traditional Design */}
+            <div className="w-64 bg-gray-50 rounded-lg p-2">
+              {results ? (
+                <div className="bg-white rounded-lg border-2 border-gray-300 overflow-hidden h-full flex flex-col">
+                  {/* Header */}
+                  <div className="bg-blue-600 text-white p-4 text-center flex flex-col justify-center min-h-[60px]">
+                    <div className="text-sm font-bold">ENERGY EFFICIENCY</div>
+                    <div className="text-xs">Thermal Performance</div>
+                  </div>
+
+                  {/* Efficiency Scale - Traditional Bars */}
+                  <div className="flex-1 flex flex-col p-3">
+                    <div className="space-y-1.5 pr-12 mb-4">
+                      {" "}
+                      {/* Added right padding for arrow space */}
+                      {(() => {
+                        const currentScore = results.currentEnergyScore
+
+                        const efficiencyLevels = [
+                          { rating: "A", range: "92+", color: "#22c55e", width: "35%", min: 92, max: 100 },
+                          { rating: "B", range: "81-91", color: "#16a34a", width: "45%", min: 81, max: 91 },
+                          { rating: "C", range: "69-80", color: "#84cc16", width: "55%", min: 69, max: 80 },
+                          { rating: "D", range: "55-68", color: "#eab308", width: "70%", min: 55, max: 68 },
+                          { rating: "E", range: "39-54", color: "#f97316", width: "80%", min: 39, max: 54 },
+                          { rating: "F", range: "21-38", color: "#ef4444", width: "90%", min: 21, max: 38 },
+                          { rating: "G", range: "1-20", color: "#dc2626", width: "100%", min: 1, max: 20 },
+                        ]
+
+                        return efficiencyLevels.map((level) => {
+                          const isCurrentRating = currentScore >= level.min && currentScore <= level.max
+
+                          return (
+                            <div key={level.rating} className="flex items-center relative">
+                              {/* Rating Letter */}
+                              <div
+                                className="w-8 h-7 flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
+                                style={{ backgroundColor: level.color }}
+                              >
+                                {level.rating}
+                              </div>
+
+                              {/* Horizontal Bar */}
+                              <div className="flex-1 ml-1 relative">
+                                <div
+                                  className="h-7 flex items-center justify-start px-2 text-xs font-bold text-white transition-opacity duration-300"
+                                  style={{
+                                    backgroundColor: level.color,
+                                    width: level.width,
+                                    opacity: isCurrentRating ? 1 : 0.4,
+                                  }}
+                                >
+                                  <span>{level.range}</span>
+                                </div>
+                              </div>
+
+                              {/* Current Score Arrow - Black arrow pointing to current rating */}
+                              {isCurrentRating && (
+                                <div className="absolute right-0 top-0 h-7 flex items-center transform translate-x-10">
+                                  <div className="flex items-center">
+                                    {/* Arrow pointing left */}
+                                    <div className="w-0 h-0 border-t-[6px] border-b-[6px] border-r-[8px] border-t-transparent border-b-transparent border-r-black"></div>
+                                    {/* Score display */}
+                                    <div className="bg-black text-white px-2 py-1 text-xs font-bold">
+                                      {currentScore}
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )
+                        })
+                      })()}
+                    </div>
+
+                    {/* Performance Summary - Better positioned at bottom */}
+                    <div className="mt-auto pt-3 border-t border-gray-200">
+                      <div className="flex justify-between items-center">
+                        {/* Energy Rating Display */}
+                        <div className="text-center">
+                          <div
+                            className={`w-10 h-8 flex items-center justify-center text-white text-sm font-bold mx-auto mb-2 ${(() => {
+                              const currentScore = results.currentEnergyScore
+                              if (currentScore >= 92) return "bg-green-500"
+                              if (currentScore >= 81) return "bg-green-600"
+                              if (currentScore >= 69) return "bg-lime-500"
+                              if (currentScore >= 55) return "bg-yellow-500"
+                              if (currentScore >= 39) return "bg-orange-500"
+                              if (currentScore >= 21) return "bg-red-500"
+                              return "bg-red-700"
+                            })()}`}
+                          >
+                            {(() => {
+                              const currentScore = results.currentEnergyScore
+                              if (currentScore >= 92) return "A"
+                              if (currentScore >= 81) return "B"
+                              if (currentScore >= 69) return "C"
+                              if (currentScore >= 55) return "D"
+                              if (currentScore >= 39) return "E"
+                              if (currentScore >= 21) return "F"
+                              return "G"
+                            })()}
+                          </div>
+                          <div className="text-xs font-medium text-gray-700">Energy Rating</div>
+                          <div className="text-xs text-gray-500">Score: {results.currentEnergyScore}</div>
+                        </div>
+
+                        {/* U-Value Display */}
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-blue-600 mb-2">
+                            {results.currentUValue.toFixed(2)}
+                          </div>
+                          <div className="text-xs font-medium text-gray-700">U-Value</div>
+                          <div className="text-xs text-gray-500">W/m²·K</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-white rounded-lg border-2 border-gray-300 p-4 h-full flex items-center justify-center">
+                  <div className="text-center text-gray-500 text-sm">Calculating...</div>
+                </div>
+              )}
+            </div>
+
+            {/* 3D Visualization */}
+            <div className="flex-1">
+              <Card className="h-full">
+                <CardContent className="p-0 h-full">
+                  <Room3DVisualization roomData={roomData} results={results} />
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </div>
+
+        {/* Right: Control Sidebar */}
+        <div className="w-80 bg-white border-l border-gray-200 flex-shrink-0">
+          <ControlSidebar roomData={roomData} results={results} onUpdateRoomData={updateRoomData} />
+        </div>
+      </div>
+
+      {/* Bottom: Compact Results Panel */}
+      <div className="flex-shrink-0 h-32">
+        <BottomResultsPanel results={results} roomData={roomData} />
+      </div>
+    </div>
+  )
+}
